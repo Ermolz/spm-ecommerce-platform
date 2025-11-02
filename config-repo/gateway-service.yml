@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: gateway-service
+  cloud:
+    gateway:
+      routes:
+        - id: order
+          uri: lb://order-service
+          predicates: [ Path=/api/orders/** ]
+        - id: inventory
+          uri: lb://inventory-service
+          predicates: [ Path=/api/inventory/** ]
+        - id: shipping
+          uri: lb://shipping-service
+          predicates: [ Path=/api/shipping/** ]
+        - id: analytics
+          uri: lb://analytics-service
+          predicates: [ Path=/api/analytics/** ]
+server:
+  port: ${GATEWAY_PORT:8080}

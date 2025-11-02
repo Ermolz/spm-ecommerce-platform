@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: analytics-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5436/analyticsdb}
+    username: ${SPRING_DATASOURCE_USERNAME:analytics}
+    password: ${SPRING_DATASOURCE_PASSWORD:analytics}
+  jpa:
+    hibernate:
+      ddl-auto: update
+  artemis:
+    broker-url: ${SPRING_ARTEMIS_BROKER_URL:tcp://localhost:61616}
+    user: ${SPRING_ARTEMIS_USER:admin}
+    password: ${SPRING_ARTEMIS_PASSWORD:admin}
+  jms:
+    pub-sub-domain: true
+server:
+  port: ${ANALYTICS_PORT:8084}
+
+app:
+  jms:
+    topic-order-events: order.events
+    selector: "type = 'ORDER_CREATED' AND priority = 'HIGH'"

@@ -1,0 +1,226 @@
+services:
+  # ===== Core infra =====
+  config-server:
+    build:
+      context: .
+      dockerfile: services/config-server/Dockerfile
+    container_name: config-server
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: /config-repo
+      JAVA_TOOL_OPTIONS: -Duser.timezone=UTC
+    volumes:
+      - ./config-repo:/config-repo:ro
+    ports: ["8888:8888"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  artemis:
+    image: vromero/activemq-artemis:latest
+    container_name: artemis
+    environment:
+      ARTEMIS_USERNAME: admin
+      ARTEMIS_PASSWORD: admin
+      DISABLE_SECURITY: "false"
+    ports:
+      - "8161:8161"        # web-консоль
+    expose:
+      - "61616"            # JMS внутрь сети docker
+    volumes:
+      - artemis_data:/var/lib/artemis/data
+    healthcheck:
+      test: ["CMD-SHELL", "[ -x /var/lib/artemis/bin/artemis ] && /var/lib/artemis/bin/artemis check || grep -q 'Server is now live' /var/lib/artemis/log/artemis.log" ]
+      interval: 60s
+      timeout: 60s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
+
+  # ===== Postgres per service =====
+  pg-order:
+    image: postgres:16-alpine
+    container_name: pg-order
+    environment:
+      POSTGRES_DB: orderdb
+      POSTGRES_USER: order
+      POSTGRES_PASSWORD: order
+    ports: ["5433:5432"]
+    volumes: [pg_order_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U order -d orderdb"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  pg-inventory:
+    image: postgres:16-alpine
+    container_name: pg-inventory
+    environment:
+      POSTGRES_DB: inventorydb
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: inventory
+    ports: ["5434:5432"]
+    volumes: [pg_inventory_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory -d inventorydb"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  pg-shipping:
+    image: postgres:16-alpine
+    container_name: pg-shipping
+    environment:
+      POSTGRES_DB: shippingdb
+      POSTGRES_USER: shipping
+      POSTGRES_PASSWORD: shipping
+    ports: ["5435:5432"]
+    volumes: [pg_shipping_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shipping -d shippingdb"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  pg-analytics:
+    image: postgres:16-alpine
+    container_name: pg-analytics
+    environment:
+      POSTGRES_DB: analyticsdb
+      POSTGRES_USER: analytics
+      POSTGRES_PASSWORD: analytics
+    ports: ["5436:5432"]
+    volumes: [pg_analytics_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U analytics -d analyticsdb"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  # ===== Microservices =====
+  order-service:
+    build:
+      context: .
+      dockerfile: services/order-service/Dockerfile
+    container_name: order-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8888
+      JAVA_TOOL_OPTIONS: -Duser.timezone=UTC
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://pg-order:5432/orderdb
+      SPRING_DATASOURCE_USERNAME: order
+      SPRING_DATASOURCE_PASSWORD: order
+      SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
+      SPRING_ARTEMIS_USER: admin
+      SPRING_ARTEMIS_PASSWORD: admin
+    depends_on:
+      config-server: { condition: service_healthy }
+      pg-order:      { condition: service_healthy }
+      artemis:       { condition: service_healthy }
+    ports: ["8081:8081"]
+    restart: unless-stopped
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: services/inventory-service/Dockerfile
+    container_name: inventory-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8888
+      JAVA_TOOL_OPTIONS: -Duser.timezone=UTC
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://pg-inventory:5432/inventorydb
+      SPRING_DATASOURCE_USERNAME: inventory
+      SPRING_DATASOURCE_PASSWORD: inventory
+      SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
+      SPRING_ARTEMIS_USER: admin
+      SPRING_ARTEMIS_PASSWORD: admin
+    depends_on:
+      config-server: { condition: service_healthy }
+      pg-inventory:  { condition: service_healthy }
+      artemis:       { condition: service_healthy }
+    ports: ["8082:8082"]
+    restart: unless-stopped
+
+  shipping-service:
+    build:
+      context: .
+      dockerfile: services/shipping-service/Dockerfile
+    container_name: shipping-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8888
+      JAVA_TOOL_OPTIONS: -Duser.timezone=UTC
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://pg-shipping:5432/shippingdb
+      SPRING_DATASOURCE_USERNAME: shipping
+      SPRING_DATASOURCE_PASSWORD: shipping
+      SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
+      SPRING_ARTEMIS_USER: admin
+      SPRING_ARTEMIS_PASSWORD: admin
+    depends_on:
+      config-server: { condition: service_healthy }
+      pg-shipping:   { condition: service_healthy }
+      artemis:       { condition: service_healthy }
+    ports: ["8083:8083"]
+    restart: unless-stopped
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: services/analytics-service/Dockerfile
+    container_name: analytics-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8888
+      JAVA_TOOL_OPTIONS: -Duser.timezone=UTC
+
+      SPRING_DATASOURCE_URL: jdbc:postgresql://pg-analytics:5432/analyticsdb
+      SPRING_DATASOURCE_USERNAME: analytics
+      SPRING_DATASOURCE_PASSWORD: analytics
+      SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
+      SPRING_ARTEMIS_USER: admin
+      SPRING_ARTEMIS_PASSWORD: admin
+    depends_on:
+      config-server:  { condition: service_healthy }
+      pg-analytics:   { condition: service_healthy }
+      artemis:        { condition: service_healthy }
+    ports: ["8084:8084"]
+    restart: unless-stopped
+
+  gateway-service:
+    build:
+      context: .
+      dockerfile: services/gateway-service/Dockerfile
+    container_name: gateway-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8888
+      JAVA_TOOL_OPTIONS: -Duser.timezone=UTC
+
+    depends_on:
+      config-server:     { condition: service_healthy }
+      order-service:     { condition: service_started }
+      inventory-service: { condition: service_started }
+      shipping-service:  { condition: service_started }
+      analytics-service: { condition: service_started }
+    ports: ["8080:8080"]
+    restart: unless-stopped
+
+volumes:
+  artemis_data:
+  pg_order_data:
+  pg_inventory_data:
+  pg_shipping_data:
+  pg_analytics_data:

@@ -1,0 +1,9 @@
+rootProject.name = 'ecommerce-platform'
+
+include 'services:eureka-server'
+include 'services:config-server'
+include 'services:gateway-service'
+include 'services:order-service'
+include 'services:inventory-service'
+include 'services:shipping-service'
+include 'services:analytics-service'

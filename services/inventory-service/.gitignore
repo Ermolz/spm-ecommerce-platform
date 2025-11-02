@@ -1,0 +1,60 @@
+# ==== OS / misc ====
+.DS_Store
+Thumbs.db
+
+# ==== IDE ====
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.sts4-cache
+.project
+.classpath
+.settings/
+.springBeans
+.apt_generated
+.factorypath
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# ==== Gradle / Build ====
+.gradle/
+build/
+out/
+bin/
+# Keep Gradle wrapper tracked
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# ==== Logs / Dumps ====
+*.log
+hs_err_pid*
+replay_pid*
+
+# ==== Spring Boot local overrides / env ====
+application-local.yml
+application-local.properties
+.env
+.env.*
+
+# ==== Test reports / coverage ====
+test-output/
+reports/
+surefire-reports/
+failsafe-reports/
+jacoco.exec
+jacoco/
+coverage/
+*.lcov
+
+# ==== Docker artifacts (keep Dockerfile & .dockerignore) ====
+*.tar
+docker-compose.override.yml
+
+# ==== Node (only if ever added) ====
+node_modules/
+npm-debug.log*
+yarn-error.log*

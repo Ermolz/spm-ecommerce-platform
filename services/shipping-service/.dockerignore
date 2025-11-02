@@ -1,0 +1,24 @@
+.gradle/
+build/
+out/
+.git/
+.gitignore
+README.md
+# VCS / build caches
+.git
+
+.gradle
+**/build
+out
+target
+
+# IDE
+.idea
+*.iml
+*.ipr
+*.iws
+.vscode
+
+.DS_Store
+Thumbs.db
+node_modules

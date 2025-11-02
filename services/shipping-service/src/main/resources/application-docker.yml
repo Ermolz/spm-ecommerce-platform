@@ -1,0 +1,32 @@
+server:
+  port: 8083
+
+spring:
+  datasource:
+    url: jdbc:postgresql://pg-shipping:5432/shippingdb
+    username: shipping
+    password: shipping
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+  artemis:
+    broker-url: tcp://artemis:61616
+    user: admin
+    password: admin
+
+  jms:
+    pub-sub-domain: true
+
+eureka:
+  client:
+    enabled: true
+    serviceUrl:
+      defaultZone: http://eureka-server:8761/eureka
+
+management.endpoints.web.exposure.include: "*"
+
+app:
+  jms:
+    topic-order-events: order.events

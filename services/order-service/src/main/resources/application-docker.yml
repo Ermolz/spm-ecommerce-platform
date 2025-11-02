@@ -1,0 +1,33 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:postgresql://pg-order:5432/orderdb
+    username: order
+    password: order
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+  artemis:
+    broker-url: tcp://artemis:61616
+    user: admin
+    password: admin
+
+eureka:
+  client:
+    enabled: true
+    serviceUrl:
+      defaultZone: http://eureka-server:8761/eureka
+
+management:
+  endpoints.web.exposure.include: "*"
+
+app:
+  jms:
+    queue-inventory-reserve: order.inventory.reserve
+    queue-inventory-reserve-reply: order.inventory.reserve.reply
+    topic-order-events: order.events
+

@@ -1,0 +1,35 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5433/orderdb}
+    username: ${SPRING_DATASOURCE_USERNAME:order}
+    password: ${SPRING_DATASOURCE_PASSWORD:order}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  artemis:
+    broker-url: ${SPRING_ARTEMIS_BROKER_URL:tcp://localhost:61616}
+    user: ${SPRING_ARTEMIS_USER:admin}
+    password: ${SPRING_ARTEMIS_PASSWORD:admin}
+
+eureka:
+  client:
+    enabled: false          # true to enable Eureka local
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+app:
+  jms:
+    queue-inventory-reserve: order.inventory.reserve
+    queue-inventory-reserve-reply: order.inventory.reserve.reply
+    topic-order-events: order.events
+

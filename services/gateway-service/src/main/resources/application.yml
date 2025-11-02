@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            - id: order
+              uri: lb://order-service
+              predicates: [ Path=/api/orders/** ]
+            - id: inventory
+              uri: lb://inventory-service
+              predicates: [ Path=/api/inventory/** ]
+            - id: shipping
+              uri: lb://shipping-service
+              predicates: [ Path=/api/shipping/** ]
+            - id: analytics
+              uri: lb://analytics-service
+              predicates: [ Path=/api/analytics/** ]
+
+eureka:
+  client:
+    enabled: false
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
