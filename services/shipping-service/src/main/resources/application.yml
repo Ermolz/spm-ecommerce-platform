@@ -2,6 +2,13 @@ server:
   port: 8083
 
 spring:
+  application:
+    name: shipping-service
+  config:
+    import: "optional:configserver:"
+  cloud:
+    config:
+      uri: http://localhost:8888
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5435/shippingdb}
     username: ${SPRING_DATASOURCE_USERNAME:shipping}
@@ -12,7 +19,7 @@ spring:
     open-in-view: false
 
   artemis:
-    broker-url: ${SPRING_ARTEMIS_BROKER_URL:tcp://localhost:61616}
+    broker-url: ${SPRING_ARTEMIS_BROKER_URL:tcp://localhost:61710}
     user: ${SPRING_ARTEMIS_USER:admin}
     password: ${SPRING_ARTEMIS_PASSWORD:admin}
 

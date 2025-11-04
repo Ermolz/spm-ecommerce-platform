@@ -25,5 +25,8 @@ public class OrderEntity {
     @Enumerated(EnumType.STRING)
     private OrderStatus status = OrderStatus.PENDING;
 
+    // Priority: LOW / MEDIUM / HIGH — used for JMS filtering
+    private String priority = "MEDIUM";
+
     private OffsetDateTime createdAt = OffsetDateTime.now();
 }

@@ -28,8 +28,7 @@ services:
       DISABLE_SECURITY: "false"
     ports:
       - "8161:8161"        # web-консоль
-    expose:
-      - "61616"            # JMS внутрь сети docker
+      - "61710:61616"      # JMS порт для локального доступа (61710 на хосте -> 61616 в контейнере)
     volumes:
       - artemis_data:/var/lib/artemis/data
     healthcheck:

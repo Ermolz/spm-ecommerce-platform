@@ -32,6 +32,7 @@ public class OrderService {
         order.setProductId(req.getProductId());
         order.setQuantity(req.getQuantity());
         order.setStatus(OrderStatus.PENDING);
+        order.setPriority(normalizePriority(req.getPriority()));
         order = orderRepository.save(order);
 
         String correlationId = UUID.randomUUID().toString();

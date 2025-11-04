@@ -1,5 +1,6 @@
 package com.example.orderservice.config;
 
+import com.example.orderservice.jms.messages.InventoryReserveReply;
 import jakarta.jms.ConnectionFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -7,6 +8,9 @@ import org.springframework.jms.config.DefaultJmsListenerContainerFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.support.converter.MappingJackson2MessageConverter;
 import org.springframework.jms.support.converter.MessageType;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Configuration
 public class JmsConfig {
@@ -17,6 +21,14 @@ public class JmsConfig {
         MappingJackson2MessageConverter c = new MappingJackson2MessageConverter();
         c.setTargetType(MessageType.TEXT);
         c.setTypeIdPropertyName("_type");
+        
+        Map<String, Class<?>> typeIdMappings = new HashMap<>();
+        typeIdMappings.put(
+                "com.example.inventoryservice.jms.messages.InventoryReserveReply",
+                InventoryReserveReply.class
+        );
+        c.setTypeIdMappings(typeIdMappings);
+        
         return c;
     }
 

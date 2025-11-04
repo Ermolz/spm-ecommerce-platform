@@ -9,7 +9,7 @@ spring:
     hibernate:
       ddl-auto: update
   artemis:
-    broker-url: ${SPRING_ARTEMIS_BROKER_URL:tcp://localhost:61616}
+    broker-url: ${SPRING_ARTEMIS_BROKER_URL:tcp://localhost:61710}
     user: ${SPRING_ARTEMIS_USER:admin}
     password: ${SPRING_ARTEMIS_PASSWORD:admin}
   jms:
@@ -20,4 +20,4 @@ server:
 app:
   jms:
     topic-order-events: order.events
-    selector: "type = 'ORDER_CREATED' AND priority = 'HIGH'"
+    selector: "type = 'ORDER_RESERVED' AND priority = 'HIGH'"

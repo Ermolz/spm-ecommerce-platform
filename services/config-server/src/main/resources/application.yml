@@ -10,7 +10,12 @@ spring:
     config:
       server:
         native:
-          search-locations: file:../config-repo, file:/config-repo
+          # АБСОЛЮТНЫЙ ПУТЬ для Windows
+          # ⚠️ ВАЖНО: Если путь не работает, ОБЯЗАТЕЛЬНО используйте VM options:
+          # -Dspring.cloud.config.server.native.search-locations=file:/E:/Academy of Mohyla/Course3_Stage1/spring-boot-microservices/ecommerce-platform/config-repo
+          # Или через относительный путь (если Working Directory = корень репозитория):
+          # -Dspring.cloud.config.server.native.search-locations=file:./config-repo
+          search-locations: file:/E:/Academy of Mohyla/Course3_Stage1/spring-boot-microservices/ecommerce-platform/config-repo
       allow-override: true
       override-none: false
       override-system-properties: false

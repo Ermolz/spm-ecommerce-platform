@@ -9,7 +9,7 @@ spring:
     hibernate:
       ddl-auto: update
   artemis:
-    broker-url: ${SPRING_ARTEMIS_BROKER_URL:tcp://localhost:61616}
+    broker-url: ${SPRING_ARTEMIS_BROKER_URL:tcp://localhost:61710}
     user: ${SPRING_ARTEMIS_USER:admin}
     password: ${SPRING_ARTEMIS_PASSWORD:admin}
   jms:

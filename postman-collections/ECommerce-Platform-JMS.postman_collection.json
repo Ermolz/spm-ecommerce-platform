@@ -1,0 +1,751 @@
+{
+	"info": {
+		"_postman_id": "ecommerce-jms-collection-2025",
+		"name": "ECommerce Platform - JMS Integration",
+		"description": "Postman collection for testing JMS integration in microservices platform\n\nThis collection demonstrates:\n- Point-to-Point (QUEUE) communication: Order → Inventory\n- Pub/Sub (TOPIC) communication: Order → Shipping, Analytics\n- Message filtering via JMS selectors\n\n**Prerequisites:**\n1. Start all services (Config Server, Eureka, Gateway, Order, Inventory, Shipping, Analytics)\n2. Start Artemis: `docker-compose up -d artemis`\n3. Ensure services are accessible through Gateway (port 8080) or directly",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Setup - Inventory",
+			"item": [
+				{
+					"name": "⚠️ Auto-Init: Check Data",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"console.log(\"ℹ️ Inventory Service automatically initializes data on startup:\");",
+									"console.log(\"- Product 1: 50 units\");",
+									"console.log(\"- Product 2: 30 units\");",
+									"console.log(\"- Product 3: 100 units\");",
+									"console.log(\"- Product 4: 25 units\");",
+									"console.log(\"- Product 5: 75 units\");",
+									"console.log(\"\\nYou can use these products directly or update stock via PUT endpoint.\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/actuator/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"actuator",
+								"health"
+							]
+						},
+						"description": "ℹ️ **Автоматическая инициализация:**\n\nInventory Service автоматически создает тестовые данные при первом запуске:\n- Product 1: 50 единиц\n- Product 2: 30 единиц\n- Product 3: 100 единиц\n- Product 4: 25 единиц\n- Product 5: 75 единиц\n\nЭти данные можно использовать сразу для создания заказов. Если нужно изменить количество, используйте PUT endpoint ниже."
+					},
+					"response": []
+				},
+				{
+					"name": "Set Stock for Product 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"productId\", response.productId);",
+									"    pm.environment.set(\"availableStock\", response.availableQty);",
+									"    console.log(\"Stock updated for Product \" + response.productId);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/stock/1?qty=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"inventory",
+								"stock",
+								"1"
+							],
+							"query": [
+								{
+									"key": "qty",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Устанавливает запас для Product 1 (50 единиц).\n\n**Примечание:** Если сервис уже инициализирован, Product 1 уже имеет 50 единиц. Этот endpoint можно использовать для изменения количества."
+					},
+					"response": []
+				},
+				{
+					"name": "Set Stock for Product 2",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/stock/2?qty=30",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"inventory",
+								"stock",
+								"2"
+							],
+							"query": [
+								{
+									"key": "qty",
+									"value": "30"
+								}
+							]
+						},
+						"description": "Устанавливает запас для Product 2 (30 единиц)"
+					},
+					"response": []
+				},
+				{
+					"name": "Set Stock for Custom Product",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.environment.set(\"productId\", response.productId);",
+									"    pm.environment.set(\"availableStock\", response.availableQty);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/stock/{{productId}}?qty={{quantity}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"inventory",
+								"stock",
+								"{{productId}}"
+							],
+							"query": [
+								{
+									"key": "qty",
+									"value": "{{quantity}}"
+								}
+							]
+						},
+						"description": "Устанавливает запас для произвольного продукта.\n\n**Используйте переменные:**\n- `productId` - ID продукта\n- `quantity` - количество единиц\n\n**JMS Flow:** Этот endpoint не использует JMS напрямую, но настраивает инвентарь, который будет проверяться через JMS при создании заказов."
+					},
+					"response": []
+				}
+			],
+			"description": "Настройка инвентаря перед созданием заказов\n\n**Автоматическая инициализация:**\nInventory Service автоматически создает 5 продуктов при первом запуске:\n- Product 1: 50 единиц\n- Product 2: 30 единиц\n- Product 3: 100 единиц\n- Product 4: 25 единиц\n- Product 5: 75 единиц\n\nЭти продукты можно использовать сразу для тестирования!"
+		},
+		{
+			"name": "2. Order Service (JMS API)",
+			"item": [
+				{
+					"name": "Get All Orders",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const orders = pm.response.json();",
+									"    console.log(\"Orders list (\" + orders.length + \"):\");",
+									"    orders.forEach((order, idx) => {",
+									"        console.log(`\\nOrder ${idx + 1}:`);",
+									"        console.log(\"- ID: \" + order.id);",
+									"        console.log(\"- Product ID: \" + order.productId);",
+									"        console.log(\"- Quantity: \" + order.quantity);",
+									"        console.log(\"- Status: \" + order.status);",
+									"        console.log(\"- Priority: \" + (order.priority || 'N/A'));",
+									"        console.log(\"- Created: \" + order.createdAt);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orders?size=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							],
+							"query": [
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Получает список всех заказов с их приоритетами.\n\n**Теперь priority сохраняется в OrderEntity!**\n\nКаждый заказ содержит:\n- id\n- productId\n- quantity\n- status (PENDING, RESERVED, REJECTED)\n- **priority** (LOW, MEDIUM, HIGH) ← вот здесь!\n- createdAt"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const order = pm.response.json();",
+									"    if (order) {",
+									"        console.log(\"Order details:\");",
+									"        console.log(\"- ID: \" + order.id);",
+									"        console.log(\"- Priority: \" + (order.priority || 'N/A'));",
+									"        console.log(\"- Status: \" + order.status);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orders/{{orderId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"{{orderId}}"
+							]
+						},
+						"description": "Получает конкретный заказ по ID, включая его priority."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Order - HIGH Priority (JMS)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const order = pm.response.json();",
+									"    pm.environment.set(\"orderId\", order.id);",
+									"    pm.environment.set(\"orderStatus\", order.status);",
+									"    ",
+									"    console.log(\"Order created via JMS:\");",
+									"    console.log(\"- Order ID: \" + order.id);",
+									"    console.log(\"- Status: \" + order.status);",
+									"    console.log(\"\\nJMS Flow:\");",
+									"    console.log(\"1. Order sent QUEUE message to Inventory Service\");",
+									"    console.log(\"2. Inventory replied via reply queue\");",
+									"    console.log(\"3. Order published TOPIC event: order.events\");",
+									"    console.log(\"4. Shipping & Analytics services received event\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"productId\": {{productId}},\n    \"quantity\": 2,\n    \"priority\": \"HIGH\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							]
+						},
+						"description": "**Main JMS API endpoint** - Creates an order using JMS communication:\n\n**Point-to-Point (QUEUE):**\n1. Sends `InventoryReserveCommand` to queue `order.inventory.reserve`\n2. Waits for reply from `order.inventory.reserve.reply`\n3. Updates order status based on reply\n\n**Pub/Sub (TOPIC):**\n4. Publishes `OrderEvent` to topic `order.events`\n5. Shipping Service receives ALL `ORDER_RESERVED` events\n6. Analytics Service receives ONLY `ORDER_RESERVED` with `priority='HIGH'` (via selector)\n\n**Result:**\n- If inventory available: Status = RESERVED, event = ORDER_RESERVED\n- If inventory unavailable: Status = REJECTED, event = ORDER_REJECTED"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Order - MEDIUM Priority (JMS)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const order = pm.response.json();",
+									"    pm.environment.set(\"orderIdMedium\", order.id);",
+									"    console.log(\"Order created with MEDIUM priority\");",
+									"    console.log(\"Note: Analytics Service will NOT receive this event (selector filters only HIGH priority)\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"productId\": {{productId}},\n    \"quantity\": 1,\n    \"priority\": \"MEDIUM\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							]
+						},
+						"description": "Creates order with MEDIUM priority. \n\n**JMS Filtering Test:**\n- Shipping Service will receive this event (no filter)\n- Analytics Service will **NOT** receive this (selector: `priority='HIGH'`)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Order - LOW Priority (JMS)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"productId\": {{productId}},\n    \"quantity\": 1,\n    \"priority\": \"LOW\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							]
+						},
+						"description": "Creates order with LOW priority.\n\n**JMS Filtering Test:**\n- Shipping Service will receive this event\n- Analytics Service will **NOT** receive this (selector filters only HIGH)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Order - Insufficient Stock (JMS)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const order = pm.response.json();",
+									"    console.log(\"Order with insufficient stock:\");",
+									"    console.log(\"- Status should be REJECTED\");",
+									"    console.log(\"- Event published: ORDER_REJECTED\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"productId\": {{productId}},\n    \"quantity\": 9999,\n    \"priority\": \"HIGH\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/orders",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							]
+						},
+						"description": "Tries to create order with quantity exceeding available stock.\n\n**JMS Flow:**\n1. Order sends QUEUE message to Inventory\n2. Inventory replies: `reserved=false`\n3. Order status = REJECTED\n4. Order publishes `ORDER_REJECTED` event"
+					},
+					"response": []
+				}
+			],
+			"description": "Order Service API endpoints that use JMS for communication"
+		},
+		{
+			"name": "3. Verify JMS Results",
+			"item": [
+				{
+					"name": "Get Analytics Events (Filtered)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const events = pm.response.json();",
+									"    console.log(\"Analytics Events (filtered by JMS selector):\");",
+									"    console.log(\"Selector: type='ORDER_RESERVED' AND priority='HIGH'\");",
+									"    console.log(\"Total events: \" + events.length);",
+									"    ",
+									"    events.forEach((event, idx) => {",
+									"        console.log(`\\nEvent ${idx + 1}:`);",
+									"        console.log(\"- Order ID: \" + event.orderId);",
+									"        console.log(\"- Type: \" + event.type);",
+									"        console.log(\"- Priority: \" + event.priority);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/analytics/events?size=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"analytics",
+								"events"
+							],
+							"query": [
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Gets analytics events that were received via JMS.\n\n**JMS Filtering:**\n- Analytics Service uses JMS selector: `type = 'ORDER_RESERVED' AND priority = 'HIGH'`\n- Only events matching this filter are stored\n- Events with MEDIUM/LOW priority or ORDER_REJECTED are filtered out\n\n**Expected:** Only HIGH priority ORDER_RESERVED events should appear here"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Shipment by Order ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const shipment = pm.response.json();",
+									"    if (shipment) {",
+									"        console.log(\"Shipment created via JMS Pub/Sub:\");",
+									"        console.log(\"- Shipment ID: \" + shipment.id);",
+									"        console.log(\"- Order ID: \" + shipment.orderId);",
+									"        console.log(\"- Tracking: \" + shipment.trackingNumber);",
+									"        console.log(\"- Status: \" + shipment.status);",
+									"        console.log(\"\\nNote: Shipping Service listens to ALL ORDER_RESERVED events\");",
+									"    } else {",
+									"        console.log(\"⚠️ No shipment found.\");",
+									"        console.log(\"Possible reasons:\");",
+									"        console.log(\"- Order was REJECTED (not RESERVED)\");",
+									"        console.log(\"- Shipping Service was not running when order was created\");",
+									"        console.log(\"- JMS event was not received\");",
+									"        console.log(\"\\n💡 Solution: Create new order or use POST /api/shipping/create-for-order/{orderId}\");",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/shipping/by-order/{{orderId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"shipping",
+								"by-order",
+								"{{orderId}}"
+							]
+						},
+						"description": "Получает shipment, созданный через JMS Pub/Sub.\n\n**JMS Flow:**\n1. Order Service публикует `ORDER_RESERVED` в topic `order.events`\n2. Shipping Service слушает topic (без фильтра)\n3. Shipping Service создает shipment для заказа\n4. Этот endpoint возвращает созданный shipment\n\n**⚠️ Если shipment пустой:**\n- Заказ был `REJECTED` (не зарезервирован)\n- Shipping Service не был запущен при создании заказа\n- Используйте POST endpoint для ручного создания"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Shipment Manually (Testing)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const shipment = pm.response.json();",
+									"    console.log(\"✅ Shipment created manually:\");",
+									"    console.log(\"- Shipment ID: \" + shipment.id);",
+									"    console.log(\"- Order ID: \" + shipment.orderId);",
+									"    console.log(\"- Tracking: \" + shipment.trackingNumber);",
+									"    console.log(\"- Status: \" + shipment.status);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/shipping/create-for-order/{{orderId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"shipping",
+								"create-for-order",
+								"{{orderId}}"
+							]
+						},
+						"description": "Ручное создание shipment для тестирования.\n\n**Используйте если:**\n- Заказ был создан до запуска Shipping Service\n- Нужно протестировать без JMS\n- Shipment не создался автоматически\n\n**Примечание:** Если shipment уже существует для этого orderId, вернется существующий."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Shipments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/shipping?size=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"shipping"
+							],
+							"query": [
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Получает список всех shipments."
+					},
+					"response": []
+				}
+			],
+			"description": "Verify results of JMS communication"
+		},
+		{
+			"name": "4. Health Checks",
+			"item": [
+				{
+					"name": "Gateway Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/actuator/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Order Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/actuator/health",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Inventory Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/actuator/health",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8082",
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Shipping Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/actuator/health",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8083",
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Analytics Service Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8084/actuator/health",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8084",
+							"path": [
+								"actuator",
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Health check endpoints for all services"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "productId",
+			"value": "1",
+			"type": "string",
+			"description": "Product ID (default: 1 - automatically initialized with 50 units)"
+		},
+		{
+			"key": "quantity",
+			"value": "10",
+			"type": "string"
+		},
+		{
+			"key": "orderId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
+
