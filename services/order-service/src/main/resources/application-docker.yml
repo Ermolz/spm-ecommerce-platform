@@ -23,7 +23,19 @@ eureka:
       defaultZone: http://eureka-server:8761/eureka
 
 management:
-  endpoints.web.exposure.include: "*"
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+info:
+  app:
+    name: ${spring.application.name}
+    version: ${app.version:0.0.1-SNAPSHOT}
+    env: ${APP_ENV:docker}
 
 app:
   jms:

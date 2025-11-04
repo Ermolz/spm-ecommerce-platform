@@ -31,3 +31,12 @@ management:
     web:
       exposure:
         include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+info:
+  app:
+    name: ${spring.application.name}
+    version: ${app.version:0.0.1-SNAPSHOT}
+    env: ${APP_ENV:docker}

@@ -1,5 +1,25 @@
 services:
   # ===== Core infra =====
+  eureka-server:
+    build:
+      context: .
+      dockerfile: services/eureka-server/Dockerfile
+    container_name: eureka-server
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8888
+      JAVA_TOOL_OPTIONS: -Duser.timezone=UTC
+    depends_on:
+      config-server:
+        condition: service_healthy
+    ports: ["8761:8761"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
   config-server:
     build:
       context: .
@@ -122,11 +142,18 @@ services:
       SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
       SPRING_ARTEMIS_USER: admin
       SPRING_ARTEMIS_PASSWORD: admin
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
     depends_on:
       config-server: { condition: service_healthy }
+      eureka-server: { condition: service_healthy }
       pg-order:      { condition: service_healthy }
       artemis:       { condition: service_healthy }
     ports: ["8081:8081"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
     restart: unless-stopped
 
   inventory-service:
@@ -145,11 +172,18 @@ services:
       SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
       SPRING_ARTEMIS_USER: admin
       SPRING_ARTEMIS_PASSWORD: admin
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
     depends_on:
       config-server: { condition: service_healthy }
+      eureka-server: { condition: service_healthy }
       pg-inventory:  { condition: service_healthy }
       artemis:       { condition: service_healthy }
     ports: ["8082:8082"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
     restart: unless-stopped
 
   shipping-service:
@@ -168,11 +202,18 @@ services:
       SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
       SPRING_ARTEMIS_USER: admin
       SPRING_ARTEMIS_PASSWORD: admin
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
     depends_on:
       config-server: { condition: service_healthy }
+      eureka-server: { condition: service_healthy }
       pg-shipping:   { condition: service_healthy }
       artemis:       { condition: service_healthy }
     ports: ["8083:8083"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
     restart: unless-stopped
 
   analytics-service:
@@ -191,11 +232,18 @@ services:
       SPRING_ARTEMIS_BROKER_URL: tcp://artemis:61616
       SPRING_ARTEMIS_USER: admin
       SPRING_ARTEMIS_PASSWORD: admin
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
     depends_on:
       config-server:  { condition: service_healthy }
+      eureka-server:  { condition: service_healthy }
       pg-analytics:   { condition: service_healthy }
       artemis:        { condition: service_healthy }
     ports: ["8084:8084"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://localhost:8084/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
     restart: unless-stopped
 
   gateway-service:
@@ -207,14 +255,40 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CLOUD_CONFIG_URI: http://config-server:8888
       JAVA_TOOL_OPTIONS: -Duser.timezone=UTC
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
 
     depends_on:
       config-server:     { condition: service_healthy }
+      eureka-server:     { condition: service_healthy }
       order-service:     { condition: service_started }
       inventory-service: { condition: service_started }
       shipping-service:  { condition: service_started }
       analytics-service: { condition: service_started }
     ports: ["8080:8080"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  admin-server:
+    build:
+      context: .
+      dockerfile: services/admin-server/Dockerfile
+    container_name: admin-server
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      JAVA_TOOL_OPTIONS: -Duser.timezone=UTC
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    ports: ["9090:9090"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://localhost:9090/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
     restart: unless-stopped
 
 volumes:
