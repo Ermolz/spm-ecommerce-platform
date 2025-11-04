@@ -120,7 +120,7 @@ Invoke-WebRequest -Uri "http://localhost:8888/order-service/default" -UseBasicPa
   "propertySources": [
     {
       "name": "file:/E:/.../config-repo/gateway-service.yml",
-      "source": { ... }
+      "source": { "...": "..." }
     }
   ]
 }
