@@ -20,3 +20,12 @@ server:
 app:
   jms:
     topic-order-events: order.events
+
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,prometheus
+    metrics:
+        tags:
+            application: ${spring.application.name}

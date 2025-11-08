@@ -18,3 +18,12 @@ server:
 app:
   jms:
     queue-inventory-reserve: order.inventory.reserve
+
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,prometheus
+    metrics:
+        tags:
+            application: ${spring.application.name}

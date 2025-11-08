@@ -1,0 +1,16 @@
+global:
+    scrape_interval: 15s # Як часто збирати метрики
+
+scrape_configs:
+    - job_name: 'spring-micrometer'
+      metrics_path: '/actuator/prometheus' # Шлях, який ми налаштували у Кроці 1
+      static_configs:
+          - targets:
+                # Перелічіть УСІ ваші сервіси з портами
+                - 'order-service:8081'
+                - 'inventory-service:8082'
+                - 'shipping-service:8083'
+                - 'analytics-service:8084'
+                - 'gateway-service:8080'
+                - 'config-server:8888'
+                - 'eureka-server:8761'

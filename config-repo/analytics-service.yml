@@ -21,3 +21,12 @@ app:
   jms:
     topic-order-events: order.events
     selector: "type = 'ORDER_RESERVED' AND priority = 'HIGH'"
+
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,info,prometheus
+    metrics:
+        tags:
+            application: ${spring.application.name}
