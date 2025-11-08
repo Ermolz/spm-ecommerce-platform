@@ -217,6 +217,25 @@ services:
     ports: ["8080:8080"]
     restart: unless-stopped
 
+  eureka-server:
+      build:
+          context: .
+          dockerfile: services/eureka-server/Dockerfile
+      container_name: eureka-server
+      ports:
+          - "8761:8761"
+      environment:
+          SPRING_PROFILES_ACTIVE: docker
+          SPRING_CLOUD_CONFIG_URI: http://config-server:8888
+      depends_on:
+          config-server: { condition: service_healthy }
+      healthcheck:
+          test: [ "CMD", "wget", "-qO", "-", "http://localhost:8761/actuator/health" ]
+          interval: 10s
+          timeout: 3s
+          retries: 10
+      restart: unless-stopped
+
 volumes:
   artemis_data:
   pg_order_data:

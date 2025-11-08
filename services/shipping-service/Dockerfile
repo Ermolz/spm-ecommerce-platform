@@ -2,6 +2,7 @@
 FROM eclipse-temurin:17-jdk AS build
 WORKDIR /app
 COPY . .
+RUN chmod +x ./gradlew
 RUN ./gradlew :services:shipping-service:clean :services:shipping-service:bootJar --no-daemon
 
 # ===== Run stage =====
