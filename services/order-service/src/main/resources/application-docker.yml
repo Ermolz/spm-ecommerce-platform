@@ -42,4 +42,20 @@ app:
     queue-inventory-reserve: order.inventory.reserve
     queue-inventory-reserve-reply: order.inventory.reserve.reply
     topic-order-events: order.events
+  # Use gRPC for inventory calls (true) or JMS (false)
+  use-grpc: true
+  grpc:
+    auth-token: ${GRPC_AUTH_TOKEN:demo-token}
+
+grpc:
+  client:
+    inventory-service:
+      address: 'dns:///inventory-service:9091'
+      negotiationType: PLAINTEXT
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      # Allow client to start even if server is not available
+      enableRetry: true
+      # Don't fail on startup if server is unavailable
+      enableKeepAliveWithoutCalls: true
 
