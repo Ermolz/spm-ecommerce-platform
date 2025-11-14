@@ -27,6 +27,18 @@ public class InventoryStreamController {
             @RequestParam(defaultValue = "2") int intervalSeconds) {
 
         SseEmitter emitter = new SseEmitter(60000L);
+        
+        emitter.onCompletion(() -> {
+            log.debug("SSE emitter completed, client disconnected");
+        });
+        
+        emitter.onTimeout(() -> {
+            log.debug("SSE emitter timeout");
+        });
+        
+        emitter.onError((ex) -> {
+            log.debug("SSE emitter error: {}", ex.getMessage());
+        });
 
         executorService.execute(() -> {
             try {
@@ -43,37 +55,59 @@ public class InventoryStreamController {
                             @Override
                             public void onUpdate(StockUpdate update) {
                                 try {
-                                    StockUpdateDTO dto = new StockUpdateDTO(
-                                            update.getProductId(),
-                                            update.getCurrentQuantity(),
-                                            update.getTimestamp(),
-                                            update.getStatus()
-                                    );
-                                    emitter.send(SseEmitter.event()
-                                            .data(dto)
-                                            .name("stock-update"));
+                                    synchronized (emitter) {
+                                        if (emitter != null) {
+                                            StockUpdateDTO dto = new StockUpdateDTO(
+                                                    update.getProductId(),
+                                                    update.getCurrentQuantity(),
+                                                    update.getTimestamp(),
+                                                    update.getStatus()
+                                            );
+                                            emitter.send(SseEmitter.event()
+                                                    .data(dto)
+                                                    .name("stock-update"));
+                                        }
+                                    }
+                                } catch (IllegalStateException e) {
+                                    log.debug("SSE emitter already completed, stopping stream");
                                 } catch (IOException e) {
+                                    log.debug("Client disconnected, stopping stream");
+                                } catch (Exception e) {
                                     log.error("Error sending SSE update", e);
-                                    emitter.completeWithError(e);
                                 }
                             }
 
                             @Override
                             public void onError(String error) {
                                 try {
-                                    emitter.send(SseEmitter.event()
-                                            .data(error)
-                                            .name("error"));
-                                    emitter.completeWithError(new RuntimeException(error));
-                                } catch (IOException e) {
-                                    log.error("Error sending SSE error", e);
-                                    emitter.completeWithError(e);
+                                    synchronized (emitter) {
+                                        if (emitter != null) {
+                                            try {
+                                                emitter.send(SseEmitter.event()
+                                                        .data(error)
+                                                        .name("error"));
+                                            } catch (Exception e) {
+                                                log.debug("Could not send error event, emitter may be closed");
+                                            }
+                                            emitter.completeWithError(new RuntimeException(error));
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    log.debug("Error completing emitter with error", e);
                                 }
                             }
 
                             @Override
                             public void onCompleted() {
-                                emitter.complete();
+                                try {
+                                    synchronized (emitter) {
+                                        if (emitter != null) {
+                                            emitter.complete();
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    log.debug("Error completing emitter", e);
+                                }
                             }
                         });
             } catch (Exception e) {

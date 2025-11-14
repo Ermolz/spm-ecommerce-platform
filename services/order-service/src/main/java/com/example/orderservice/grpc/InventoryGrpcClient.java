@@ -206,8 +206,11 @@ public class InventoryGrpcClient {
                 public void onNext(StockUpdate update) {
                     try {
                         callback.onUpdate(update);
+                    } catch (IllegalStateException e) {
+                        log.debug("Callback rejected update, client may have disconnected");
+                        errorRef.set(e);
                     } catch (Exception e) {
-                        log.error("Error in stock update callback", e);
+                        log.debug("Error in stock update callback", e);
                         errorRef.set(e);
                     }
                 }
