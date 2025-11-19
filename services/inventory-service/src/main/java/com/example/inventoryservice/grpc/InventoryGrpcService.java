@@ -21,6 +21,8 @@ public class InventoryGrpcService extends InventoryServiceGrpc.InventoryServiceI
     private final InventoryService inventoryService;
     private final InventoryItemRepository repository;
 
+    private static final String INTERNAL_ERROR = "Internal server error: ";
+
 
     @Override
     @Transactional
@@ -54,11 +56,13 @@ public class InventoryGrpcService extends InventoryServiceGrpc.InventoryServiceI
         } catch (Exception e) {
             log.error("Error in ReserveInventory", e);
             responseObserver.onError(Status.INTERNAL
-                    .withDescription("Internal server error: " + e.getMessage())
+                    .withDescription(INTERNAL_ERROR + e.getMessage())
                     .withCause(e)
                     .asRuntimeException());
         }
     }
+
+
 
     @Override
     public void getStock(GetStockRequest request, 
@@ -93,7 +97,7 @@ public class InventoryGrpcService extends InventoryServiceGrpc.InventoryServiceI
         } catch (Exception e) {
             log.error("Error in GetStock", e);
             responseObserver.onError(Status.INTERNAL
-                    .withDescription("Internal server error: " + e.getMessage())
+                    .withDescription(INTERNAL_ERROR + e.getMessage())
                     .withCause(e)
                     .asRuntimeException());
         }
@@ -146,10 +150,8 @@ public class InventoryGrpcService extends InventoryServiceGrpc.InventoryServiceI
 
                 responseObserver.onNext(update);
 
-                try {
-                    TimeUnit.SECONDS.sleep(intervalSeconds);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+
+                if (!sleepWithInterruptHandling(intervalSeconds)) {
                     break;
                 }
             }
@@ -159,10 +161,21 @@ public class InventoryGrpcService extends InventoryServiceGrpc.InventoryServiceI
         } catch (Exception e) {
             log.error("Error in StreamStockUpdates", e);
             responseObserver.onError(Status.INTERNAL
-                    .withDescription("Internal server error: " + e.getMessage())
+                    .withDescription(INTERNAL_ERROR + e.getMessage())
                     .withCause(e)
                     .asRuntimeException());
         }
     }
+
+    private boolean sleepWithInterruptHandling(long intervalSeconds) {
+        try {
+            TimeUnit.SECONDS.sleep(intervalSeconds);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
 }
 

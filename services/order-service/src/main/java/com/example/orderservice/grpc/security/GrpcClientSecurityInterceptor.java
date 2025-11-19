@@ -13,16 +13,17 @@ public class GrpcClientSecurityInterceptor implements ClientInterceptor {
     private String authToken;
 
     @Override
-    public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
-            MethodDescriptor<ReqT, RespT> method,
+    public <T, R> ClientCall<T, R> interceptCall(
+            MethodDescriptor<T, R> method,
             CallOptions callOptions,
             Channel next) {
 
-        return new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(
+
+        return new ForwardingClientCall.SimpleForwardingClientCall<T, R>(
                 next.newCall(method, callOptions)) {
 
             @Override
-            public void start(Listener<RespT> responseListener, Metadata headers) {
+            public void start(Listener<R> responseListener, Metadata headers) {
                 Metadata.Key<String> authKey = Metadata.Key.of(
                         "authorization", Metadata.ASCII_STRING_MARSHALLER);
                 headers.put(authKey, "Bearer " + authToken);

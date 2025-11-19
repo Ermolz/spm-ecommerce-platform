@@ -12,10 +12,10 @@ public class GrpcSecurityInterceptor implements ServerInterceptor {
             Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER);
 
     @Override
-    public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(
-            ServerCall<ReqT, RespT> call,
+    public <T, R> ServerCall.Listener<T> interceptCall(
+            ServerCall<T, R> call,
             Metadata headers,
-            ServerCallHandler<ReqT, RespT> next) {
+            ServerCallHandler<T, R> next) {
         
         String authHeader = headers.get(AUTHORIZATION_KEY);
 
@@ -31,7 +31,7 @@ public class GrpcSecurityInterceptor implements ServerInterceptor {
         if (!isAuthenticated) {
             log.warn("Unauthenticated gRPC request - rejecting");
             call.close(Status.UNAUTHENTICATED.withDescription("Missing or invalid token"), headers);
-            return new ServerCall.Listener<ReqT>() {};
+            return new ServerCall.Listener<>() {};
         }
 
         return next.startCall(call, headers);

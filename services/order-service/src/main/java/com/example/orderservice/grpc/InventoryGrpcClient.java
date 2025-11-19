@@ -1,6 +1,9 @@
 package com.example.orderservice.grpc;
 
 import com.example.inventoryservice.grpc.*;
+import com.example.orderservice.grpc.exception.GrpcInventoryException;
+import com.example.orderservice.grpc.exception.InventoryServiceUnavailableException;
+import com.example.orderservice.grpc.exception.ProductNotFoundException;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
@@ -69,14 +72,14 @@ public class InventoryGrpcClient {
             
             io.grpc.ClientInterceptor authInterceptor = new io.grpc.ClientInterceptor() {
                 @Override
-                public <ReqT, RespT> io.grpc.ClientCall<ReqT, RespT> interceptCall(
-                        io.grpc.MethodDescriptor<ReqT, RespT> method,
+                public <R1, R2> io.grpc.ClientCall<R1, R2> interceptCall(
+                        io.grpc.MethodDescriptor<R1, R2> method,
                         io.grpc.CallOptions callOptions,
                         io.grpc.Channel next) {
-                    return new io.grpc.ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(
+                    return new io.grpc.ForwardingClientCall.SimpleForwardingClientCall<R1, R2>(
                             next.newCall(method, callOptions)) {
                         @Override
-                        public void start(io.grpc.ClientCall.Listener<RespT> responseListener, 
+                        public void start(io.grpc.ClientCall.Listener<R2> responseListener, 
                                          io.grpc.Metadata headers) {
                             io.grpc.Metadata.Key<String> authKey = io.grpc.Metadata.Key.of(
                                     "authorization", io.grpc.Metadata.ASCII_STRING_MARSHALLER);
@@ -92,7 +95,9 @@ public class InventoryGrpcClient {
                     .withWaitForReady();
             fallbackAsyncStub = InventoryServiceGrpc.newStub(fallbackChannel)
                     .withInterceptors(authInterceptor);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            log.error("Failed to parse gRPC address: {}", grpcAddress, e);
+        } catch (RuntimeException e) {
             log.error("Failed to create fallback gRPC channel", e);
         }
     }
@@ -141,15 +146,17 @@ public class InventoryGrpcClient {
             if (status.getCode() == Status.Code.INVALID_ARGUMENT) {
                 throw new IllegalArgumentException("Invalid request: " + status.getDescription());
             } else if (status.getCode() == Status.Code.NOT_FOUND) {
-                throw new RuntimeException("Product not found: " + status.getDescription());
+                throw new ProductNotFoundException("Product not found: " + status.getDescription());
             } else if (status.getCode() == Status.Code.UNAVAILABLE) {
-                throw new RuntimeException("Inventory service unavailable: " + status.getDescription());
+                throw new InventoryServiceUnavailableException("Inventory service unavailable: " + status.getDescription());
             } else {
-                throw new RuntimeException("gRPC error: " + status.getDescription(), e);
+                throw new GrpcInventoryException("gRPC error: " + status.getDescription(), e);
             }
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | GrpcInventoryException | IllegalStateException e) {
+            throw e;
+        } catch (RuntimeException e) {
             log.error("Unexpected error in ReserveInventory", e);
-            throw new RuntimeException("Failed to reserve inventory: " + e.getMessage(), e);
+            throw new GrpcInventoryException("Failed to reserve inventory: " + e.getMessage(), e);
         }
     }
 
@@ -172,15 +179,17 @@ public class InventoryGrpcClient {
                     status.getCode(), status.getDescription(), e);
 
             if (status.getCode() == Status.Code.NOT_FOUND) {
-                throw new RuntimeException("Product not found: " + status.getDescription());
+                throw new ProductNotFoundException("Product not found: " + status.getDescription());
             } else if (status.getCode() == Status.Code.INVALID_ARGUMENT) {
                 throw new IllegalArgumentException("Invalid request: " + status.getDescription());
             } else {
-                throw new RuntimeException("gRPC error: " + status.getDescription(), e);
+                throw new GrpcInventoryException("gRPC error: " + status.getDescription(), e);
             }
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | GrpcInventoryException | IllegalStateException e) {
+            throw e;
+        } catch (RuntimeException e) {
             log.error("Unexpected error in GetStock", e);
-            throw new RuntimeException("Failed to get stock: " + e.getMessage(), e);
+            throw new GrpcInventoryException("Failed to get stock: " + e.getMessage(), e);
         }
     }
 
@@ -209,22 +218,22 @@ public class InventoryGrpcClient {
                     } catch (IllegalStateException e) {
                         log.debug("Callback rejected update, client may have disconnected");
                         errorRef.set(e);
-                    } catch (Exception e) {
+                    } catch (RuntimeException e) {
                         log.debug("Error in stock update callback", e);
                         errorRef.set(e);
                     }
                 }
 
                 @Override
-                public void onError(Throwable t) {
-                    errorRef.set(t);
+                public void onError(Throwable throwable) {
+                    errorRef.set(throwable);
                     latch.countDown();
                     
-                    if (t instanceof StatusRuntimeException) {
-                        Status status = ((StatusRuntimeException) t).getStatus();
+                    if (throwable instanceof StatusRuntimeException statusRuntimeException) {
+                        Status status = statusRuntimeException.getStatus();
                         callback.onError("gRPC error: " + status.getCode() + " - " + status.getDescription());
                     } else {
-                        callback.onError("Stream error: " + t.getMessage());
+                        callback.onError("Stream error: " + throwable.getMessage());
                     }
                 }
 
@@ -242,13 +251,15 @@ public class InventoryGrpcClient {
 
             Throwable error = errorRef.get();
             if (error != null && !(error instanceof StatusRuntimeException)) {
-                throw new RuntimeException("Stream processing error", error);
+                throw new GrpcInventoryException("Stream processing error", error);
             }
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             callback.onError("Stream interrupted");
-        } catch (Exception e) {
+        } catch (GrpcInventoryException e) {
+            throw e;
+        } catch (RuntimeException e) {
             log.error("Error in StreamStockUpdates", e);
             callback.onError("Failed to stream updates: " + e.getMessage());
         }
