@@ -20,6 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OrderService {
 
+
     private final OrderRepository orderRepository;
     private final MessagingProperties props;
     private final JmsTemplate queueJmsTemplate;
@@ -57,11 +58,9 @@ public class OrderService {
         );
 
         boolean reserved = false;
-        String reason = null;
 
         if (reply != null) {
             reserved = reply.isReserved();
-            reason = reply.getReason();
         }
 
         if (reserved) {
@@ -85,11 +84,14 @@ public class OrderService {
     }
 
     private String normalizePriority(String p) {
-        if (p == null) return "MEDIUM";
+        if (p == null) return DEFAULT_STATUS;
         String u = p.toUpperCase();
         return switch (u) {
-            case "LOW", "MEDIUM", "HIGH" -> u;
-            default -> "MEDIUM";
+            case "LOW", DEFAULT_STATUS, "HIGH" -> u;
+            default -> DEFAULT_STATUS;
         };
     }
+    public static final String DEFAULT_STATUS = "MEDIUM";
+
+
 }
