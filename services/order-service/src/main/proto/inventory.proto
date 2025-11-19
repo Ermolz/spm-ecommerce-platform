@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package com.example.inventoryservice.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.example.inventoryservice.grpc";
+option java_outer_classname = "InventoryProto";
+
+// Request to reserve inventory
+message ReserveInventoryRequest {
+  int64 product_id = 1;
+  int32 quantity = 2;
+  int64 order_id = 3;
+}
+
+// Response for reservation
+message ReserveInventoryResponse {
+  bool reserved = 1;
+  string reason = 2;
+  int32 available_quantity = 3;
+}
+
+// Request to get product stock
+message GetStockRequest {
+  int64 product_id = 1;
+}
+
+// Response with stock information
+message GetStockResponse {
+  int64 product_id = 1;
+  int32 available_quantity = 2;
+  bool exists = 3;
+}
+
+// Request to stream stock updates
+message StreamStockUpdatesRequest {
+  int64 product_id = 1;
+  int32 update_interval_seconds = 2; // How often to send updates
+}
+
+// Stock update message for streaming
+message StockUpdate {
+  int64 product_id = 1;
+  int32 current_quantity = 2;
+  int64 timestamp = 3;
+  string status = 4; // "AVAILABLE", "LOW_STOCK", "OUT_OF_STOCK"
+}
+
+// Inventory Service definition
+service InventoryService {
+  // Reserve inventory for an order (unary RPC)
+  rpc ReserveInventory(ReserveInventoryRequest) returns (ReserveInventoryResponse);
+
+  // Get current stock for a product (unary RPC)
+  rpc GetStock(GetStockRequest) returns (GetStockResponse);
+
+  // Stream stock updates for a product (server-side streaming)
+  rpc StreamStockUpdates(StreamStockUpdatesRequest) returns (stream StockUpdate);
+}
+

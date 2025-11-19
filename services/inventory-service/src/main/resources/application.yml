@@ -9,6 +9,9 @@ spring:
   cloud:
     config:
       uri: http://localhost:8888
+  # Enable debug logging for gRPC
+  main:
+    log-startup-info: true
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5434/inventorydb}
     username: ${SPRING_DATASOURCE_USERNAME:inventory}
@@ -47,3 +50,18 @@ app:
   jms:
     queue-inventory-reserve: order.inventory.reserve
     queue-inventory-reserve-reply: order.inventory.reserve.reply
+
+grpc:
+  server:
+    port: 9091
+    # Enable gRPC server
+    enabled: true
+    # In-process server name (optional)
+    in-process-name: inventory-grpc-server
+
+# Enable debug logging for gRPC
+logging:
+  level:
+    net.devh.boot.grpc: DEBUG
+    io.grpc: INFO
+    com.example.inventoryservice.grpc: DEBUG

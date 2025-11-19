@@ -143,11 +143,13 @@ services:
       SPRING_ARTEMIS_USER: admin
       SPRING_ARTEMIS_PASSWORD: admin
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka
+      GRPC_AUTH_TOKEN: ${GRPC_AUTH_TOKEN:-demo-token}
     depends_on:
       config-server: { condition: service_healthy }
       eureka-server: { condition: service_healthy }
       pg-order:      { condition: service_healthy }
       artemis:       { condition: service_healthy }
+      inventory-service: { condition: service_started }
     ports: ["8081:8081"]
     healthcheck:
       test: ["CMD", "wget", "-qO", "-", "http://localhost:8081/actuator/health"]
@@ -178,7 +180,9 @@ services:
       eureka-server: { condition: service_healthy }
       pg-inventory:  { condition: service_healthy }
       artemis:       { condition: service_healthy }
-    ports: ["8082:8082"]
+    ports: 
+      - "8082:8082"  # REST API
+      - "9091:9091"  # gRPC
     healthcheck:
       test: ["CMD", "wget", "-qO", "-", "http://localhost:8082/actuator/health"]
       interval: 10s

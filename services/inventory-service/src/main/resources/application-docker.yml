@@ -40,3 +40,7 @@ app:
   jms:
     queue-inventory-reserve: order.inventory.reserve
     queue-inventory-reserve-reply: order.inventory.reserve.reply
+
+grpc:
+  server:
+    port: 9091
