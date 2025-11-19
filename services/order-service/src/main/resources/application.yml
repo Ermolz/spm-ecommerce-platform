@@ -52,6 +52,9 @@ app:
   use-grpc: true
   grpc:
     auth-token: ${GRPC_AUTH_TOKEN:demo-token}
+  inventory:
+    service:
+      url: ${INVENTORY_SERVICE_URL:http://localhost:8082}
 
 grpc:
   client:

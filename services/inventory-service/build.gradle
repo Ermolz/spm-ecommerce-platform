@@ -1,8 +1,10 @@
 plugins {
     id 'java'
     id 'org.springframework.boot' version '3.5.7'
-    id 'io.spring.dependency-management'
+    id 'io.spring.dependency-management' version '1.1.6'
     id 'com.google.protobuf' version '0.9.4'
+    id 'org.springframework.cloud.contract' version '4.2.1'
+    id 'maven-publish'
 }
 
 group = 'com.example'
@@ -33,6 +35,12 @@ ext {
     set('nettyVersion', "4.1.100.Final")
 }
 
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-artemis'
@@ -60,6 +68,8 @@ dependencies {
     runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Spring Cloud Contract Verifier
+    testImplementation 'org.springframework.cloud:spring-cloud-starter-contract-verifier'
     // H2 for testing
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -95,3 +105,35 @@ sourceSets {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+contracts {
+    testFramework = 'JUNIT5'
+    baseClassForTests = 'com.example.inventoryservice.contract.InventoryContractTest'
+    // Contracts directory
+    contractsDslDir = file("${project.projectDir}/src/test/resources/contracts")
+    // Publish stubs to local Maven repository
+    basePackageForTests = 'com.example.inventoryservice.contract'
+}
+
+// Publish stubs to local Maven repository
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifact verifierStubsJar
+        }
+    }
+    repositories {
+        mavenLocal()
+    }
+}
+
+// Configure contract test task
+contractTest {
+    useJUnitPlatform()
+    testLogging {
+        exceptionFormat = 'full'
+    }
+}
+
+// Make sure contract tests run before regular tests
+test.dependsOn contractTest
